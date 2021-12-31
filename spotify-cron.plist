@@ -2,20 +2,22 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<!--
+	<string>https://alvinalexander.com/mac-os-x/launchd-plist-examples-startinterval-startcalendarinterval/</string>
+	-->
 	<key>Label</key>
-	<string>manga</string>
+	<string>spotify-manager</string>
 	<key>ProgramArguments</key>
 	<array>
-		<string>/Users/newdev/.pyenv/shims/python3</string>
-		<string>/Users/newdev/Hive/Development/personal_projects/spotify-liked-songs-manager/app.py</string>
+		<string>/Users/newdev/Hive/Development/personal_projects/spotify-liked-songs-manager/start.sh</string>
 	</array>
 	<key>RunAtLoad</key>
 	<true/>
 	<key>StartCalendarInterval</key>
-	<dict>
-	  <key>Weekday</key>
-	  <integer>7</integer>
-	</dict>
+    <dict>
+        <key>Weekday</key>
+        <integer>7</integer>
+    </dict>
 	<key>StandardOutPath</key>
 	<string>/Users/newdev/Hive/Development/personal_projects/spotify-liked-songs-manager/cron-logs/cron-out.log</string>
 	<key>StandardErrorPath</key>
