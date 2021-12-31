@@ -1,0 +1,10 @@
+# Spotipy stores auth in .cache
+.cache
+
+# don't want to save scrap work to git
+scrap_code.py
+scrap-cron.plist
+
+# just want empty cron logs in git
+cron-logs/*
+
