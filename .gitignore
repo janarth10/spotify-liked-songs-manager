@@ -6,5 +6,7 @@ scrap_code.py
 scrap-cron.plist
 
 # just want empty cron logs in git
-cron-logs/*
+cron-logs
 
+# credentials for spotify web api
+configs
