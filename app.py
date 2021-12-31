@@ -116,7 +116,7 @@ def discover_recently_played():
 	"""
 
 	MIN_PLAYLIST_SIZE = 7 # on avg 7 * 3m per song, at least a playlist of 21m
-	PLAYLIST_ID = '5U55HdTVoOnEK9zls6Hnup' # ID for playlist FTS Bot - hope this id doesnt change
+	FTS_BOT_PLAYLIST_ID = '5U55HdTVoOnEK9zls6Hnup' # ID for playlist FTS Bot - hope this id doesnt change
 	print("\n\nDISCOVER recently played songs")
 
 	last_50_recently_played_uris = set(get_50_recently_played_uris())
@@ -129,12 +129,15 @@ def discover_recently_played():
 	for uri in get_uris_in_top10s_iterator():
 		last_50_recently_played_uris = last_50_recently_played_uris - {uri}
 
+	# don't save songs already in the playlist
+	for uri in get_uris_for_playlist_iterator(playlist_id=FTS_BOT_PLAYLIST_ID):
+		last_50_recently_played_uris = last_50_recently_played_uris - {uri}
 
 	# create playlist if we've discovered enough songs
 	if len(last_50_recently_played_uris) > MIN_PLAYLIST_SIZE:
 		spotify_client = get_spotify_client()
 		spotify_client.playlist_add_items(
-			playlist_id=PLAYLIST_ID,
+			playlist_id=FTS_BOT_PLAYLIST_ID,
 			items=list(last_50_recently_played_uris)
 		)
 		print(f"Spotify cron added {len(last_50_recently_played_uris)}")
