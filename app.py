@@ -174,6 +174,30 @@ def get_spotify_client():
 	return spotify_client
 
 
+def get_uris_for_playlist_iterator(playlist_id, limit=float('inf')):
+	# limit - only return first x songs
+	# https://developer.spotify.com/documentation/web-api/reference/#/operations/get-playlists-tracks
+	CHUNK_SIZE = 50
+
+	spotify_client = get_spotify_client()
+	num_total_songs_to_return = min(
+		spotify_client.playlist_items(playlist_id=playlist_id, limit=1)['total'],
+		limit,
+	)
+	counter = 0
+
+	for i in range(math.ceil(num_total_songs_to_return / CHUNK_SIZE)):
+		resp_json = spotify_client.playlist_items(
+			playlist_id=playlist_id,
+			limit=CHUNK_SIZE,
+			offset=CHUNK_SIZE*i,
+		)
+		for track in resp_json['items']:
+			yield track['track']['uri']
+			counter += 1
+			if counter == limit:
+				break
+
 def get_50_recently_played_uris():
 	spotify_client = get_spotify_client()
 	resp_json = spotify_client.current_user_recently_played(
@@ -209,11 +233,8 @@ def get_uris_in_top10s_iterator():
 
 	# only look at last 10 playlists if we have more than 10 TOP10_s
 	for playlist_id in top10_playlist_ids:
-		for track in spotify_client.playlist_items(
-			playlist_id=playlist_id, 
-			fields='items.track.uri'
-		)['items']:
-			yield track['track']['uri']
+		for uri in get_uris_for_playlist_iterator(playlist_id=playlist_id):
+			yield uri
 
 
 # ------------ Main Code - running weekly on a cron ----------------------------
