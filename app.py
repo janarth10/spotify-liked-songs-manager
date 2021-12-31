@@ -25,9 +25,6 @@ SCOPES = [
 ]
 
 
-
-
-
 # --------------------------- Core features ------------------------------------
 
 def discover_top10_weekly():
@@ -42,6 +39,9 @@ def discover_top10_weekly():
 	
 	Use cron to run this weekly
 
+	Not removing Liked Songs in this feature because I want to see what I'm listening to every week,
+	including songs that I've already liked.
+
 	Example response data 
 	https://developer.spotify.com/documentation/web-api/reference/#/operations/get-users-top-artists-and-tracks
 	"""
@@ -49,7 +49,7 @@ def discover_top10_weekly():
 	CHUNK_SIZE = 50
 	NUM_TOP_SONGS_TO_SAVE = 10
 	DISCOVER_TIME_RANGE = 'short_term' # spotify returns top songs over 4 weeks, 6 months, or all time
-	print('\n\n DISCOVER top10 songs')
+	print('\n\nDISCOVER Top10 songs')
 
 	# TOP10_Dec-26-2021
 	top10_weekly_playlist_name = TOP10_PLAYLISTS_BASE_NAME + datetime.datetime.utcnow().astimezone().strftime('%b-%d-%Y')
@@ -59,23 +59,9 @@ def discover_top10_weekly():
 	top50_resp_json = spotify_client.current_user_top_tracks(limit=CHUNK_SIZE, time_range=DISCOVER_TIME_RANGE)
 	current_top50_track_uris_set = {x['uri'] for x in top50_resp_json['items']}
 
-	# get existing top10 playlists so we don't save same songs
-	all_playlists_resp_json = spotify_client.current_user_playlists()
-	top10_playlist_ids = [
-		playlist['id'] for playlist in 
-		all_playlists_resp_json['items'] 
-		if playlist['name'][:len(TOP10_PLAYLISTS_BASE_NAME)] == TOP10_PLAYLISTS_BASE_NAME
-	]
-
-	for playlist_id in top10_playlist_ids:
-		playlist_tracks_uri_set = {
-			track['track']['uri'] for track in 
-			spotify_client.playlist_items(
-				playlist_id=playlist_id, 
-				fields='items.track.uri'
-			)['items']
-		}
-		current_top50_track_uris_set = current_top50_track_uris_set - playlist_tracks_uri_set
+	# remove existing top10 songs
+	for uri in get_uris_in_top10s_iterator():
+		current_top50_track_uris_set = current_top50_track_uris_set - {uri}
 
 	# if we have any new tracks in the top50, create a new top10 playlist for them
 	if current_top50_track_uris_set:
@@ -89,7 +75,7 @@ def discover_top10_weekly():
 			playlist_id=new_top10_playlist['id'],
 			items=list(current_top50_track_uris_set)[:NUM_TOP_SONGS_TO_SAVE] 
 		)
-		print(f"Spotify cron added {len(list(current_top50_track_uris_set)[:NUM_TOP_SONGS_TO_SAVE])}")
+	print(f"DISCOVER Top10 added {len(list(current_top50_track_uris_set)[:NUM_TOP_SONGS_TO_SAVE])}")
 
 
 def discover_recently_played():
@@ -140,7 +126,7 @@ def discover_recently_played():
 			playlist_id=FTS_BOT_PLAYLIST_ID,
 			items=list(last_50_recently_played_uris)
 		)
-		print(f"Spotify cron added {len(last_50_recently_played_uris)}")
+	print(f"DISCOVER Recently Played added {len(last_50_recently_played_uris)}")
 
 
 def group_liked_songs_by_audio_features():
@@ -163,6 +149,8 @@ def group_liked_songs_by_audio_features():
 
 
 def get_spotify_client():
+	# https://spotipy.readthedocs.io/en/2.19.0/#spotipy.oauth2.SpotifyOAuth
+
 	web_api_creds = None
 	with open(SPOTIFY_CREDENTIALS_PATH) as f:
 		web_api_creds = json.load(f)['web']
@@ -178,8 +166,12 @@ def get_spotify_client():
 
 
 def get_uris_for_playlist_iterator(playlist_id, limit=float('inf')):
-	# limit - only return first x songs
-	# https://developer.spotify.com/documentation/web-api/reference/#/operations/get-playlists-tracks
+	"""
+	limit - only return first x songs
+
+	https://spotipy.readthedocs.io/en/2.19.0/#spotipy.client.Spotify.playlist_items
+	https://developer.spotify.com/documentation/web-api/reference/#/operations/get-playlists-tracks
+	"""
 	CHUNK_SIZE = 50
 
 	spotify_client = get_spotify_client()
@@ -201,7 +193,11 @@ def get_uris_for_playlist_iterator(playlist_id, limit=float('inf')):
 			if counter == limit:
 				break
 
+
 def get_50_recently_played_uris():
+	# https://spotipy.readthedocs.io/en/2.19.0/#spotipy.client.Spotify.current_user_recently_played
+	# https://developer.spotify.com/documentation/web-api/reference/#/operations/get-recently-played
+
 	spotify_client = get_spotify_client()
 	resp_json = spotify_client.current_user_recently_played(
 		limit=50,
@@ -213,6 +209,8 @@ def get_50_recently_played_uris():
 
 def get_liked_songs_uris_iterator():
 	# https://spotipy.readthedocs.io/en/2.19.0/?highlight=top#spotipy.client.Spotify.current_user_saved_tracks
+	# https://developer.spotify.com/documentation/web-api/reference/#/operations/get-users-saved-tracks
+
 	CHUNK_SIZE = 50
 
 	spotify_client = get_spotify_client()
@@ -226,6 +224,9 @@ def get_liked_songs_uris_iterator():
 			yield track['track']['uri']
 
 def get_uris_in_top10s_iterator():
+	# https://spotipy.readthedocs.io/en/2.19.0/#spotipy.client.Spotify.current_user_playlists
+	# https://developer.spotify.com/documentation/web-api/reference/#/operations/get-a-list-of-current-users-playlists
+
 	spotify_client = get_spotify_client()
 	all_playlists_resp_json = spotify_client.current_user_playlists()
 	top10_playlist_ids = [
@@ -244,3 +245,4 @@ def get_uris_in_top10s_iterator():
 
 discover_top10_weekly()
 discover_recently_played()
+
