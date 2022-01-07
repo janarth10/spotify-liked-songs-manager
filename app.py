@@ -120,7 +120,7 @@ def discover_recently_played():
 		last_50_recently_played_uris = last_50_recently_played_uris - {uri}
 
 	# create playlist if we've discovered enough songs
-	if len(last_50_recently_played_uris) > MIN_PLAYLIST_SIZE:
+	if len(last_50_recently_played_uris) >= MIN_PLAYLIST_SIZE:
 		spotify_client = get_spotify_client()
 		spotify_client.playlist_add_items(
 			playlist_id=FTS_BOT_PLAYLIST_ID,
@@ -140,9 +140,54 @@ def group_liked_songs_by_audio_features():
 	- [ ] given patterns, group liked songs
 
 	"""
-	pass
 
+	# VERY BASIC v1, to hit my deadline for v1 lol
+	# collecting groups of songs with same speechiness up to 2 decimals, and the list is 
+	#	over 7 songs
+	CHUNK_SIZE = 50
+	MIN_PLAYLIST_SIZE = 7 # on avg 7 * 3m per song, at least a playlist of 21m
+	NUM_DECIMALS_TO_CHECK = 2 # collecting groups of songs with same speechiness up to 2 decimals
 
+	print("\n\nDISCOVER Liked Songs Grouper")
+
+	from collections import defaultdict
+	feature_stats_aggregation = {
+		# 'energy': defaultdict(list),
+		# 'tempo': defaultdict(list),
+		'speechiness': defaultdict(list),
+		# 'instrumentalness': defaultdict(list),
+		# 'liveness': defaultdict(list),
+	}
+
+	audio_features = []
+	uris_chunk = []
+	spotify_client = get_spotify_client()
+	for uri in get_liked_songs_uris_iterator():
+		uris_chunk.append(uri)
+		if len(uris_chunk) == CHUNK_SIZE:
+			audio_features.extend(spotify_client.audio_features(tracks=uris_chunk))
+			uris_chunk = []
+
+	if uris_chunk:
+		audio_features.extend(spotify_client.audio_features(tracks=uris_chunk))
+
+	for audio_feature in audio_features:
+		for key, _ in feature_stats_aggregation.items():
+			feature_stats_aggregation[key][round(audio_feature[key], NUM_DECIMALS_TO_CHECK)].append(audio_feature['uri'])
+
+	for speech_level, uris in feature_stats_aggregation['speechiness'].items():
+		if len(uris) >= MIN_PLAYLIST_SIZE:
+			playlist = spotify_client.user_playlist_create(
+				user=MY_USER_ID,
+				name=f"{speech_level}_speechy",
+			)
+			print(f"creating new playlist {playlist['name']}")
+			print(f"adding {len(uris)} songs!")
+
+			spotify_client.playlist_add_items(
+				playlist_id=playlist['id'],
+				items=uris
+			)
 
 
 # --------------------------- helpers ------------------------------------------
@@ -240,9 +285,22 @@ def get_uris_in_top10s_iterator():
 		for uri in get_uris_for_playlist_iterator(playlist_id=playlist_id):
 			yield uri
 
+def get_playlist_id_by_name(playlist_name):
+	spotify_client = get_spotify_client()
+	## JPTODO i have over 50 playlists, need an iterator to return everythin
+	all_playlists_resp_json = spotify_client.current_user_playlists()
+	playlist_ids = [
+		playlist['id'] for playlist in 
+		all_playlists_resp_json['items'] 
+		if playlist['name'] == playlist_name
+	]
+	if playlist_ids:
+		return playlist_ids[0]
+
 
 # ------------ Main Code - running weekly on a cron ----------------------------
 
 discover_top10_weekly()
 discover_recently_played()
+# group_liked_songs_by_audio_features()
 
