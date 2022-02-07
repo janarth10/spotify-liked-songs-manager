@@ -22,7 +22,7 @@ thus far are
 	- [ ] display stats graphs
 	- [ ] let other people auth and use this script
 - [ ] Learn from reddit feedback
-	- [ ] better design patterns, naming, abstractions, commenting
+	- [ ] better design patterns, naming, abstractions, commenting, commits
 	- [ ] could I work as a freelancer with this level of code?
 	- [ ] tips for
 		- [ ] logging errors & outputs
